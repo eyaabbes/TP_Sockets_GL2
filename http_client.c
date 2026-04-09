@@ -3,16 +3,17 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <netdb.h>
 
-#define SERVER_IP "142.250.74.14"   // IP Google (peut changer mais fonctionne)
-#define SERVER_PORT 80
+#define PORT 80
 #define BUFFER_SIZE 4096
 #define REQUEST_SIZE 8192
 
 int main() {
     int sock;
     struct sockaddr_in server;
-    char request[] = "GET / HTTP/1.1\r\nHost: google.com\r\nConnection: close\r\n\r\n";
+    char hostname[100];
+    char request[REQUEST_SIZE];
     char buffer[BUFFER_SIZE];
     int bytes;
 
