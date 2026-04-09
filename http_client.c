@@ -3,51 +3,91 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <netdb.h>
 
-#define SERVER_IP "142.250.74.14"   // IP Google (peut changer mais fonctionne)
-#define SERVER_PORT 80
+#define PORT 80
 #define BUFFER_SIZE 4096
+#define REQUEST_SIZE 8192
 
 int main() {
     int sock;
     struct sockaddr_in server;
-    char request[] = "GET / HTTP/1.1\r\nHost: google.com\r\nConnection: close\r\n\r\n";
+    char hostname[100];
+    char request[REQUEST_SIZE];
     char buffer[BUFFER_SIZE];
     int bytes;
 
-    // 1. Création socket TCP
+    // 1. Demander le serveur
+    printf("Entrez le serveur (ex: google.com) : ");
+    scanf("%s", hostname);
+
+    // 2. Résolution DNS
+    struct hostent *he = gethostbyname(hostname);
+    if (he == NULL) {
+        printf("Erreur: serveur introuvable\n");
+        return 1;
+    }
+
+    // 3. Création socket
     sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0) {
         perror("socket");
         return 1;
     }
 
-    // 2. Configuration serveur
+    // 4. Configuration serveur
     server.sin_family = AF_INET;
-    server.sin_port = htons(SERVER_PORT);
-    inet_pton(AF_INET, SERVER_IP, &server.sin_addr);
+    server.sin_port = htons(PORT);
+    memcpy(&server.sin_addr, he->h_addr_list[0], he->h_length);
 
-    // 3. Connexion
+    // 5. Connexion
     if (connect(sock, (struct sockaddr*)&server, sizeof(server)) < 0) {
         perror("connect");
         return 1;
     }
 
-    printf("Connecté au serveur\n");
+    printf("\nConnecté au serveur %s\n", hostname);
 
-    // 4. Envoi requête HTTP
+    // vider le buffer après scanf
+    getchar();
+
+    // 6. Lecture requête HTTP
+    printf("\nTapez votre requête HTTP :\n");
+    printf("(Terminez par une ligne vide)\n\n");
+
+    request[0] = '\0';
+
+    while (1) {
+        char line[1024];
+
+        if (fgets(line, sizeof(line), stdin) == NULL)
+            break;
+
+        if (strcmp(line, "\n") == 0) {
+            strncat(request, "\r\n", REQUEST_SIZE - strlen(request) - 1);
+            break;
+        }
+
+        strncat(request, line, REQUEST_SIZE - strlen(request) - 1);
+    }
+
+    // 7. Envoi
     send(sock, request, strlen(request), 0);
 
-    printf("Requête envoyée :\n%s\n", request);
+    printf("\n----- Requête envoyée -----\n%s\n", request);
 
-    // 5. Réception réponse
+    // 8. Réception
+    printf("\n----- Réponse serveur -----\n");
+
     while ((bytes = recv(sock, buffer, BUFFER_SIZE - 1, 0)) > 0) {
         buffer[bytes] = '\0';
         printf("%s", buffer);
     }
 
-    // 6. Fermeture
+    // 9. Fermeture
     close(sock);
+
+    printf("\n\n----- Fin -----\n");
 
     return 0;
 }
