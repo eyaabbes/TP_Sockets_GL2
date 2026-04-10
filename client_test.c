@@ -42,7 +42,7 @@ int main() {
     for (int i = 1; i <= 5; i++) {
         snprintf(message, BUFFER_SIZE, "Client PID=%d, message %d\n", getpid(), i);
         send(sock_client, message, strlen(message), 0);
-        sleep(1);
+        
     }
 
     close(sock_client);
